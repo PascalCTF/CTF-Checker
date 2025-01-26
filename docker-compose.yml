@@ -3,3 +3,15 @@ services:
     build: .
     ports:
       - "80:5000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+    restart: always
+  
+  db:
+    image: mysql
+    env_file:
+      - .env

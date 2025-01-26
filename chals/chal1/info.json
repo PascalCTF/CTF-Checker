@@ -1,7 +1,0 @@
-{
-    "name": "chal1",
-    "description": "This is a test challenge",
-    "category": "test",
-    "points": 0,
-    "flag": "flag{this_is_a_fake_flag}"
-}

@@ -3,20 +3,17 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-
-<div class="container align-items-center">
+<div class="p-5 container align-items-center">
     <h1>Upload checker</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
         <div class="row mt-4">
             <div class="col-auto">
-                <input type="file" class="form-control" id="customFile" name="file" />
+                <input type="file" class="form-control" id="customFile" name="file" accept=".zip" />
             </div>
             <div class="col-auto">
                 <button type="submit" class="btn btn-danger">Send</button>
             </div>
         </div>
     </form>
-
 </div>
-
 {% endblock %}

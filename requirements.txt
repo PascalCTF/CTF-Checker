@@ -1,1 +1,4 @@
 flask
+apscheduler
+sqlalchemy
+mysql-connector-python
