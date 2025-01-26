@@ -6,6 +6,8 @@ scheduler = BackgroundScheduler(daemon=True)
 
 app = Flask(__name__)
 
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024 # 32MB
+
 @app.route('/ping')
 def ping():
     return 'pong', 200
@@ -13,6 +15,19 @@ def ping():
 @app.route('/')
 def dashboard():
     return render_template('index.html')
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload():
+    if request.method == 'GET':
+        return render_template('upload.html')
+    elif request.method == 'POST':
+        file = request.files.get('file')
+        if file and file.content_type == 'application/zip':
+            file.save('chals/' + file.filename)
+            # TODO: Extract the zip file
+            return 'File uploaded successfully!', 200
+        
+        return render_template('upload.html')
 
 @scheduler.scheduled_job('interval', seconds=5)
 def check_status():
