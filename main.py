@@ -2,7 +2,7 @@ from flask import Flask, request, render_template
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import checker
+from models import Base, Checkers, Status
 import os, pathlib, json, subprocess, zipfile, tempfile
 
 DATABASE_URL = f'mysql+mysqlconnector://{os.getenv("MYSQL_USER")}:{os.getenv("MYSQL_PASSWORD")}@db:3306/{os.getenv("MYSQL_DATABASE")}'
@@ -21,7 +21,17 @@ def ping():
 
 @app.route('/')
 def dashboard():
-    return render_template('index.html')
+    session = Session()
+    s = session.query(Status).all()
+    return render_template('index.html', status=s)
+
+@app.route('/docs')
+def docs():
+    return render_template('docs.html')
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
@@ -60,7 +70,7 @@ def upload():
                         if not isinstance(info[tag[0]], tag[1]):
                             return f'{tag} must be of type {tag[1]} in {chal_folder}', 400
                     
-                    check = checker.Checkers(
+                    check = Checkers(
                         name=info['name'],
                         category=info['category'],
                         points=info['points'],
@@ -80,16 +90,18 @@ def check_status():
     print('Checking status...')
 
     session = Session()
-    for check in session.query(checker.Checkers).all():
+    for check in session.query(Checkers).all():
         with tempfile.TemporaryFile() as temp_file:
-            temp_file.write(check.checker.encode())
+            temp_file.write(check.checker)
             result = subprocess.run(['python3'], stdin=temp_file, stdout=subprocess.PIPE)
-        if result.stdout.decode().strip() == check.flag:
-            print(f'Flag for {check.name} is correct!')
-        else:
-            print(f'Flag for {check.name} is incorrect!\nExprected: {check.flag}\nGot: {result.stdout.decode().strip()}')
+        flags = result.stdout.decode().strip().split('\n')
+        for i, flag in enumerate(flags):
+            if flag == check.flag:
+                print(f'Flag for {check.name} test {i+1} is correct!')
+            else:
+                print(f'Flag for {check.name} test {i+1} is incorrect!\nExprected: {check.flag}\nGot: {result.stdout.decode().strip()}')
 
 if __name__ == '__main__':
-    scheduler.start() # Flask debug must be False, otherwise the scheduler will run twice
-    checker.Base.metadata.create_all(engine)
+    # scheduler.start() # Flask debug must be False, otherwise the scheduler will run twice
+    Base.metadata.create_all(engine)
     app.run(host='0.0.0.0', port=5000, debug=True)
