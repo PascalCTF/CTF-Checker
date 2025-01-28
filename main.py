@@ -1,9 +1,9 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, send_file
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import Base, Checkers, Status
-import os, pathlib, json, subprocess, zipfile, tempfile
+import os, pathlib, json, subprocess, zipfile, tempfile, datetime, csv
 
 DATABASE_URL = f'mysql+mysqlconnector://{os.getenv("MYSQL_USER")}:{os.getenv("MYSQL_PASSWORD")}@db:3306/{os.getenv("MYSQL_DATABASE")}'
 
@@ -19,11 +19,28 @@ app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024 # 32MB
 def ping():
     return 'pong', 200
 
+# TODO: Implement the index.html template
 @app.route('/')
 def dashboard():
     session = Session()
-    s = session.query(Status).all()
-    return render_template('index.html', status=s)
+    checkers = session.query(Checkers).all()
+    status = []
+    for check in checkers:
+        status.append([
+            check,
+            session.query(Status).filter(
+                Status.checker == check.id
+            ).order_by(
+                Status.date.desc()
+            )[:50]
+        ])
+
+    return render_template('index.html', status=status)
+
+@app.route('/status/<int:id>')
+def status(id):
+    #TODO: Implement this
+    return 'Not implemented', 501
 
 @app.route('/docs')
 def docs():
@@ -78,6 +95,7 @@ def upload():
                         flag=info['flag'],
                         checker=checker_path.read_text().encode()
                     )
+                    app.logger.info(f'Adding checker {check}')
                     session = Session()
                     session.add(check)
                     session.commit()
@@ -85,23 +103,33 @@ def upload():
         
         return render_template('upload.html')
 
-@scheduler.scheduled_job('interval', seconds=5)
-def check_status():
-    print('Checking status...')
+# TODO: Test this route
+@app.route('/export')
+def export():
+    session = Session()
+    status = session.query(Status).all()
+    with tempfile.TemporaryFile() as temp_file:
+        writer = csv.writer(temp_file)
+        writer.writerow(['id', 'checker', 'uptime', 'date'])
+        for s in status:
+            writer.writerow([s.id, s.checker, s.uptime, s.date])
+        temp_file.seek(0)
+        return send_file(temp_file, as_attachment=True, download_name='status.csv', mimetype='text/csv')
 
+@scheduler.scheduled_job('interval', minutes=2)
+def check_status():
     session = Session()
     for check in session.query(Checkers).all():
         with tempfile.TemporaryFile() as temp_file:
             temp_file.write(check.checker)
             result = subprocess.run(['python3'], stdin=temp_file, stdout=subprocess.PIPE)
         flags = result.stdout.decode().strip().split('\n')
-        for i, flag in enumerate(flags):
-            if flag == check.flag:
-                print(f'Flag for {check.name} test {i+1} is correct!')
-            else:
-                print(f'Flag for {check.name} test {i+1} is incorrect!\nExprected: {check.flag}\nGot: {result.stdout.decode().strip()}')
+        passed = flags.count(check.flag) / len(flags) * 100
+        status = Status(checker=check.id, uptime=passed, date=datetime.datetime.now())
+        session.add(status)
+        session.commit()
 
 if __name__ == '__main__':
-    # scheduler.start() # Flask debug must be False, otherwise the scheduler will run twice
+    scheduler.start() # Flask debug must be False, otherwise the scheduler will run twice
     Base.metadata.create_all(engine)
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,2 +1,7 @@
 docker-compose.yml
 Dockerfile
+.env
+LICENSE
+.git
+.gitignore
+README.md

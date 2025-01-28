@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, LargeBinary, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, LargeBinary, Float, DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -7,7 +7,11 @@ class Status(Base):
     __tablename__ = 'status'
     id = Column(Integer, primary_key=True, autoincrement=True)
     checker = Column(Integer, ForeignKey('checkers.id'), nullable=False)
-    up = Column(Boolean, nullable=False)
+    uptime = Column(Float, nullable=False) # percentage of tests passed
+    date = Column(DateTime, nullable=False)
+    
+    def __repr__(self):
+        return f'<Status(checker={self.checker}, uptime={self.uptime}, date={self.date})>'
     
 class Checkers(Base):
     __tablename__ = 'checkers'
