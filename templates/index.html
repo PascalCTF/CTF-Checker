@@ -7,8 +7,21 @@
 	{% if status|length == 0 %}
 	<h5>No checker added yet. <a href="{{ url_for('upload') }}">Upload some here.</a></h5>
 	{% else %}
-	<h5>Uptime over the past 30 days. <a href="#">View historical uptime.</a></h5>
+	<h5>Uptime over the past 100 minutes. <a href="#">View historical uptime.</a></h5>
 	{% endif %}
+
+	{% with messages = get_flashed_messages() %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %}" role="alert">					
+					{{message}}
+					<button type="button" class="close" data-dismiss="alert" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
 	{% for stat in status %}
 	<div class="card my-3">
 		<div class="card-body">
@@ -25,7 +38,7 @@
 				{% endfor %}
 			</div>
 			<div class="d-flex justify-content-between mt-2">
-				<span>30 days ago</span>
+				<span>100 minutes ago</span>
 				<span>100% uptime</span>
 				<span>Today</span>
 			</div>

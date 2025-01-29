@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, render_template, send_file, flash, redirect, url_for
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -14,10 +14,6 @@ Session = sessionmaker(bind=engine)
 app = Flask(__name__)
 
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024 # 32MB
-
-@app.route('/ping')
-def ping():
-    return 'pong', 200
 
 # TODO: Implement the index.html template
 @app.route('/')
@@ -71,7 +67,8 @@ def upload():
                     checker_path = pathlib.Path(zip_extracted, chal_folder, 'checker.py')
 
                     if not info_path.exists() or not checker_path.exists():
-                        return f'Either info or checker not present in {chal_folder}', 400
+                        flash(f'Either info or checker not present in {chal_folder}', 'error')
+                        return redirect(url_for('upload'))
 
                     info = json.loads(info_path.read_text())
                     tags = [
@@ -83,9 +80,11 @@ def upload():
                     ]
                     for tag in tags:
                         if not tag[0] in info:
-                            return f'No {tag} attribute in info in {chal_folder}', 400
+                            flash(f'No {tag[0]} attribute in info in {chal_folder}', 'error')
+                            return redirect(url_for('upload'))
                         if not isinstance(info[tag[0]], tag[1]):
-                            return f'{tag} must be of type {tag[1]} in {chal_folder}', 400
+                            flash(f'{tag[0]} must be of type {tag[1]} in {chal_folder}', 'error')
+                            return redirect(url_for('upload'))
                     
                     check = Checkers(
                         name=info['name'],
@@ -99,22 +98,22 @@ def upload():
                     session = Session()
                     session.add(check)
                     session.commit()
-            return 'File uploaded successfully!', 200
+            
+            flash('File uploaded successfully!', 'success')
+            return redirect(url_for('dashboard'))
         
         return render_template('upload.html')
 
-# TODO: Test this route
 @app.route('/export')
 def export():
     session = Session()
     status = session.query(Status).all()
-    with tempfile.TemporaryFile() as temp_file:
+    with tempfile.NamedTemporaryFile(mode='w') as temp_file:
         writer = csv.writer(temp_file)
         writer.writerow(['id', 'checker', 'uptime', 'date'])
         for s in status:
             writer.writerow([s.id, s.checker, s.uptime, s.date])
-        temp_file.seek(0)
-        return send_file(temp_file, as_attachment=True, download_name='status.csv', mimetype='text/csv')
+        return send_file(open(temp_file.name, 'rb'), as_attachment=True, download_name='status.csv', mimetype='text/csv')
 
 @scheduler.scheduled_job('interval', minutes=2)
 def check_status():

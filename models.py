@@ -16,11 +16,11 @@ class Status(Base):
 class Checkers(Base):
     __tablename__ = 'checkers'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(50), unique=True, nullable=False)
-    description = Column(String(100), nullable=False)
-    category = Column(String(50), nullable=False)
+    name = Column(String(30), unique=True, nullable=False)
+    description = Column(String(250), nullable=False)
+    category = Column(String(10), nullable=False)
     points = Column(Integer, nullable=False)
-    flag = Column(String(50), unique=True, nullable=False)
+    flag = Column(String(100), unique=True, nullable=False)
     checker = Column(LargeBinary, nullable=False)
 
     def __repr__(self):
