@@ -24,4 +24,4 @@ class Checkers(Base):
     checker = Column(LargeBinary, nullable=False)
 
     def __repr__(self):
-        return f'<Checkers(name={self.name}, description={self.description}, category={self.category}, points={self.points}, flag={self.flag})>'
+        return f'<Checkers(name={self.name}, description={self.description}, category={self.category}, points={self.points})>'

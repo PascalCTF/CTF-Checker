@@ -14,29 +14,35 @@ Session = sessionmaker(bind=engine)
 app = Flask(__name__)
 
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024 # 32MB
+app.config['SECRET_KEY'] = os.urandom(32)
 
-# TODO: Implement the index.html template
 @app.route('/')
 def dashboard():
     session = Session()
     checkers = session.query(Checkers).all()
     status = []
     for check in checkers:
+        stat =  session.query(Status).filter(
+            Status.checker == check.id
+        ).order_by(
+            Status.date.desc()
+        )[:50]
+
         status.append([
             check,
-            session.query(Status).filter(
-                Status.checker == check.id
-            ).order_by(
-                Status.date.desc()
-            )[:50]
+            stat,
+            sum([s.uptime for s in stat]) / max(len(stat), 1)
         ])
 
     return render_template('index.html', status=status)
 
 @app.route('/status/<int:id>')
 def status(id):
-    #TODO: Implement this
-    return 'Not implemented', 501
+    return "Not implemented", 501
+    stat = Session().query(Status).filter(
+        Status.checker == id
+    )
+    return render_template('status.html', status=stat)
 
 @app.route('/docs')
 def docs():
@@ -62,47 +68,56 @@ def upload():
                     zip_extracted = pathlib.Path(temp_dir, 'extracted')
                     zip_ref.extractall(zip_extracted)
                 
-                for chal_folder in os.listdir(zip_extracted):
-                    info_path = pathlib.Path(zip_extracted, chal_folder, 'info.json')
-                    checker_path = pathlib.Path(zip_extracted, chal_folder, 'checker.py')
+                try:
+                    for chal_folder in os.listdir(zip_extracted):
+                        info_path = pathlib.Path(zip_extracted, chal_folder, 'info.json')
+                        checker_path = pathlib.Path(zip_extracted, chal_folder, 'checker.py')
 
-                    if not info_path.exists() or not checker_path.exists():
-                        flash(f'Either info or checker not present in {chal_folder}', 'error')
-                        return redirect(url_for('upload'))
+                        if not info_path.exists() or not checker_path.exists():
+                            flash(f'Either info or checker not present in {chal_folder}', 'error')
+                            return redirect(url_for('upload'))
 
-                    info = json.loads(info_path.read_text())
-                    tags = [
-                        ['flag', str], 
-                        ['points', int], 
-                        ['category', str], 
-                        ['description', str], 
-                        ['name', str]
-                    ]
-                    for tag in tags:
-                        if not tag[0] in info:
-                            flash(f'No {tag[0]} attribute in info in {chal_folder}', 'error')
-                            return redirect(url_for('upload'))
-                        if not isinstance(info[tag[0]], tag[1]):
-                            flash(f'{tag[0]} must be of type {tag[1]} in {chal_folder}', 'error')
-                            return redirect(url_for('upload'))
-                    
-                    check = Checkers(
-                        name=info['name'],
-                        category=info['category'],
-                        points=info['points'],
-                        description=info['description'],
-                        flag=info['flag'],
-                        checker=checker_path.read_text().encode()
-                    )
-                    app.logger.info(f'Adding checker {check}')
-                    session = Session()
-                    session.add(check)
-                    session.commit()
+                        info = json.loads(info_path.read_text())
+                        tags = [
+                            ['flag', str], 
+                            ['points', int], 
+                            ['category', str], 
+                            ['description', str], 
+                            ['name', str]
+                        ]
+                        for tag in tags:
+                            if not tag[0] in info:
+                                flash(f'No {tag[0]} attribute in info in {chal_folder}', 'error')
+                                return redirect(url_for('upload'))
+                            if not isinstance(info[tag[0]], tag[1]):
+                                flash(f'{tag[0]} must be of type {tag[1]} in {chal_folder}', 'error')
+                                return redirect(url_for('upload'))
+                        
+                        session = Session()
+                        if session.query(Checkers).filter(Checkers.name == info['name']).first():
+                            continue
+                        check = Checkers(
+                            name=info['name'],
+                            category=info['category'],
+                            points=info['points'],
+                            description=info['description'],
+                            flag=info['flag'],
+                            checker=checker_path.read_text().encode()
+                        )
+                        
+                        app.logger.info(f'Adding checker {check}')
+                        session.add(check)
+                        session.commit()
+                except Exception as e:
+                    app.logger.error(e)
+                    flash('Error while adding checkers', 'error')
+                    session.rollback()
+                    return redirect(url_for('upload'))
             
             flash('File uploaded successfully!', 'success')
             return redirect(url_for('dashboard'))
         
-        return render_template('upload.html')
+        return render_template(url_for('upload'))
 
 @app.route('/export')
 def export():
@@ -123,6 +138,7 @@ def check_status():
             temp_file.write(check.checker)
             result = subprocess.run(['python3'], stdin=temp_file, stdout=subprocess.PIPE)
         flags = result.stdout.decode().strip().split('\n')
+        app.logger.info(f'Checker {check.name} returned {flags}')
         passed = flags.count(check.flag) / len(flags) * 100
         status = Status(checker=check.id, uptime=passed, date=datetime.datetime.now())
         session.add(status)

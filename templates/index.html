@@ -10,14 +10,12 @@
 	<h5>Uptime over the past 100 minutes. <a href="#">View historical uptime.</a></h5>
 	{% endif %}
 
-	{% with messages = get_flashed_messages() %}
+	{% with messages = get_flashed_messages(with_categories=true) %}
 		{% if messages %}
 			{% for category, message in messages %}
 				<div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %}" role="alert">					
 					{{message}}
-					<button type="button" class="close" data-dismiss="alert" aria-label="Close">
-						<span aria-hidden="true">&times;</span>
-					</button>
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 				</div>
 			{% endfor %}
 		{% endif %}
@@ -26,20 +24,18 @@
 	<div class="card my-3">
 		<div class="card-body">
 			<div class="d-flex justify-content-between">
-				<span>API</span>
-				<span class="text-success">Operational</span>
+				<span>{{ stat[0].name }}</span>
+				<span class="text-success">{{ stat[0].category }}</span>
 			</div>
 			<div class="progress mt-2" style="height: 40px;">
-				{% for i in range(100) %}
-					<div class="progress-bar bg-success" role="progressbar" style="width: 2%;"></div>
-					{% if i != 99 %}
-						<div class="progress-bar bg-white" role="progressbar" style="width: 1%;"></div>
-					{% endif %}
+				{% for s in stat[1] %}
+					<div class="progress-bar bg-{% if s.uptime > 0.5 %}success{% else %}danger{% endif %}" role="progressbar" style="width: 2%;"></div>
+					<div class="progress-bar bg-white" role="progressbar" style="width: 1%;"></div>
 				{% endfor %}
 			</div>
 			<div class="d-flex justify-content-between mt-2">
 				<span>100 minutes ago</span>
-				<span>100% uptime</span>
+				<span>{{ stat[2] }}% uptime</span>
 				<span>Today</span>
 			</div>
 		</div>
