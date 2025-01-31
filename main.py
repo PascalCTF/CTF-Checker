@@ -147,4 +147,4 @@ def check_status():
 if __name__ == '__main__':
     scheduler.start() # Flask debug must be False, otherwise the scheduler will run twice
     Base.metadata.create_all(engine)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)
