@@ -130,15 +130,17 @@ def export():
             writer.writerow([s.id, s.checker, s.uptime, s.date])
         return send_file(open(temp_file.name, 'rb'), as_attachment=True, download_name='status.csv', mimetype='text/csv')
 
-@scheduler.scheduled_job('interval', minutes=2)
+@scheduler.scheduled_job('interval', minutes=1)
 def check_status():
     session = Session()
     for check in session.query(Checkers).all():
-        with tempfile.TemporaryFile() as temp_file:
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.py', delete=False) as temp_file:
             temp_file.write(check.checker)
-            result = subprocess.run(['python3'], stdin=temp_file, stdout=subprocess.PIPE)
-        flags = result.stdout.decode().strip().split('\n')
-        app.logger.info(f'Checker {check.name} returned {flags}')
+            temp_script_path = temp_file.name
+
+        result = subprocess.run(['python3', temp_script_path], capture_output=True, text=True)
+        flags = result.stdout.strip().split('\n')
+        print(f'Checker {check.name} returned {flags}', flush=True)
         passed = flags.count(check.flag) / len(flags) * 100
         status = Status(checker=check.id, uptime=passed, date=datetime.datetime.now())
         session.add(status)
