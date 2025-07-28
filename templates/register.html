@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="p-5 container align-items-center">
+    <h1>Register</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show" role="alert">
+                    {{message}}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <form action="/register" method="post">
+        <div class="row mt-4">
+            <div class="col-auto">
+                <input class="form-control" type="text" name="username" placeholder="Username" required>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-auto">
+                <input class="form-control" type="password" name="password" placeholder="Password" required>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-auto">
+                <button class="btn btn-primary" type="submit">Register</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
