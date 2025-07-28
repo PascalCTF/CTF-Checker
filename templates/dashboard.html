@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CTF Checker Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+.status-success { background-color: var(--bs-success); }
+.status-failure { background-color: var(--bs-danger); }
+.status-error { background-color: var(--bs-warning); }
+.status-pending { background-color: var(--bs-secondary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6 fw-bold">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Dashboard
+            </h1>
+            <p class="text-muted">Monitor and manage your CTF checkers</p>
+        </div>
+        <a href="{{ url_for('add_checker') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>
+            Add New Checker
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Total Checkers</h5>
+                            <h2 class="mb-0">{{ checkers|length }}</h2>
+                        </div>
+                        <i class="fas fa-list fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Active</h5>
+                            <h2 class="mb-0">{{ checkers|selectattr('is_active')|list|length }}</h2>
+                        </div>
+                        <i class="fas fa-play fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Success Rate</h5>
+                            <h2 class="mb-0">
+                                {% set successful = checkers|selectattr('last_status', 'equalto', 'success')|list|length %}
+                                {% if checkers|length > 0 %}
+                                    {{ "%.0f"|format((successful / checkers|length) * 100) }}%
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </h2>
+                        </div>
+                        <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Last Update</h5>
+                            <h2 class="mb-0" id="last-update">
+                                <i class="fas fa-sync fa-spin me-1"></i>
+                                Loading...
+                            </h2>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkers List -->
+    {% if checkers %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Your Checkers
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshStatus()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Refresh
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Status</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Last Run</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="checkers-table">
+                            {% for checker in checkers %}
+                            <tr data-checker-id="{{ checker.id }}">
+                                <td>
+                                    <span class="status-indicator status-{{ checker.last_status }}"></span>
+                                    <span class="status-text">{{ checker.last_status|title }}</span>
+                                    {% if not checker.is_active %}
+                                        <small class="text-muted">(Inactive)</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ checker.name }}</strong>
+                                    {% if checker.last_status == 'success' %}
+                                        <i class="fas fa-check-circle text-success ms-1"></i>
+                                    {% elif checker.last_status == 'failure' %}
+                                        <i class="fas fa-times-circle text-danger ms-1"></i>
+                                    {% elif checker.last_status == 'error' %}
+                                        <i class="fas fa-exclamation-triangle text-warning ms-1"></i>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ checker.description or 'No description' }}</small>
+                                </td>
+                                <td>
+                                    <span class="last-run-time">
+                                        {% if checker.last_run %}
+                                            {{ checker.last_run.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        {% else %}
+                                            <small class="text-muted">Never</small>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('toggle_checker', checker_id=checker.id) }}" 
+                                           class="btn btn-outline-{{ 'success' if not checker.is_active else 'secondary' }}"
+                                           title="{{ 'Activate' if not checker.is_active else 'Deactivate' }}">
+                                            <i class="fas fa-{{ 'play' if not checker.is_active else 'pause' }}"></i>
+                                        </a>
+                                        <button class="btn btn-outline-info" onclick="showCheckerDetails({{ checker.id }})" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <a href="{{ url_for('delete_checker', checker_id=checker.id) }}" 
+                                           class="btn btn-outline-danger"
+                                           onclick="return confirm('Are you sure you want to delete this checker?')"
+                                           title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-plus-circle fa-5x text-muted mb-4"></i>
+            <h3>No Checkers Yet</h3>
+            <p class="text-muted mb-4">Get started by adding your first CTF checker</p>
+            <a href="{{ url_for('add_checker') }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus me-2"></i>
+                Add Your First Checker
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Checker Details Modal -->
+<div class="modal fade" id="checkerDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Checker Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="checkerDetailsContent">
+                <div class="text-center py-3">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Loading details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+{% endblock %}

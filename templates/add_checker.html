@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Add Checker - CTF Checker Manager{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-plus me-2"></i>
+                        Add New Checker
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label for="name" class="form-label">
+                                <i class="fas fa-tag me-1"></i>
+                                Checker Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="name" name="name" required
+                                   placeholder="e.g., Web Challenge Login Check">
+                            <div class="form-text">Give your checker a descriptive name</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>
+                                Description
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="3"
+                                      placeholder="Brief description of what this checker does"></textarea>
+                            <div class="form-text">Optional description for your reference</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="script_file" class="form-label">
+                                <i class="fas fa-file-code me-1"></i>
+                                Checker Script <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" class="form-control" id="script_file" name="script_file" 
+                                   accept=".py" required>
+                            <div class="form-text">
+                                Upload a Python script (.py file). The script should print the flag to stdout.
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="expected_flag" class="form-label">
+                                <i class="fas fa-flag me-1"></i>
+                                Expected Flag <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="expected_flag" name="expected_flag" required
+                                   placeholder="flag{example_flag_here}">
+                            <div class="form-text">
+                                The exact flag that your checker should output when successful
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle me-2"></i>Checker Requirements:</h6>
+                            <ul class="mb-0">
+                                <li>Your script must be written in Python 3</li>
+                                <li>Print the flag to stdout when successful</li>
+                                <li>Use environment variables for dynamic configuration (URL, HOST, PORT)</li>
+                                <li>Exit with code 0 for success, non-zero for failure</li>
+                                <li>Execution timeout is 30 seconds</li>
+                            </ul>
+                        </div>
+
+                        <div class="card bg-dark">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-code me-2"></i>
+                                    Example Checker Script:
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <pre class="text-light mb-0"><code>#!/usr/bin/env python3
+
+import os
+import requests
+from pwn import *
+import logging
+logging.disable()
+
+# Per le challenge web
+URL = os.environ.get("URL", "http://todo.challs.todo.it")
+if URL.endswith("/"):
+   URL = URL[:-1]
+
+# Se challenge tcp
+HOST = os.environ.get("HOST", "todo.challs.todo.it")
+PORT = int(os.environ.get("PORT", 34001))
+
+# Check challenge
+flag = "flag{todo}"
+print(flag)</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>
+                                Add Checker
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - CTF Checker Manager{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center">
+        <div class="mb-4">
+            <i class="fas fa-server fa-5x text-danger"></i>
+        </div>
+        <h1 class="display-4 fw-bold mb-3">500 - Server Error</h1>
+        <p class="lead text-muted mb-4">
+            Something went wrong on our end. Please try again later.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Go to Dashboard
+            </a>
+            <button onclick="window.location.reload()" class="btn btn-outline-primary">
+                <i class="fas fa-sync-alt me-2"></i>
+                Try Again
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
