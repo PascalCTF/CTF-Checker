@@ -1,23 +1,19 @@
 import os
 import uuid
-from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
 from app import app, db
 from models import Checker, CheckerExecution
 import logging
 
-# Main routes
 @app.route('/')
 def index():
     return redirect(url_for('dashboard'))
 
-# Dashboard routes
 @app.route('/dashboard')
 def dashboard():
     checkers = Checker.query.order_by(Checker.created_at.desc()).all()
     
-    # Get recent executions for each checker
     for checker in checkers:
         checker.recent_executions = CheckerExecution.query.filter_by(
             checker_id=checker.id
@@ -32,7 +28,6 @@ def add_checker():
         description = request.form.get('description', '')
         expected_flag = request.form['expected_flag']
         
-        # Handle file upload
         if 'script_file' not in request.files:
             flash('No script file uploaded.', 'error')
             return render_template('add_checker.html')
@@ -43,12 +38,10 @@ def add_checker():
             return render_template('add_checker.html')
         
         if file and file.filename.endswith('.py'):
-            # Generate unique filename
-            filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
+            filename = secure_filename(f"{uuid.uuid4()}.py")
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             
-            # Create checker record
             checker = Checker(
                 name=name,
                 description=description,
@@ -79,14 +72,12 @@ def toggle_checker(checker_id):
 def delete_checker(checker_id):
     checker = Checker.query.get_or_404(checker_id)
     
-    # Delete the script file
     try:
         if os.path.exists(checker.script_path):
             os.remove(checker.script_path)
     except Exception as e:
         logging.error(f"Error deleting script file: {e}")
     
-    # Delete the checker (executions will be deleted due to cascade)
     db.session.delete(checker)
     db.session.commit()
     
@@ -125,7 +116,6 @@ def checker_details(checker_id):
     
     return render_template('checker_details.html', checker=checker, executions=executions)
 
-# Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('404.html'), 404

@@ -10,11 +10,10 @@ def start_scheduler():
     global scheduler
     
     if scheduler is not None:
-        return  # Already started
+        return
     
     scheduler = BackgroundScheduler()
     
-    # Schedule checker execution every minute
     scheduler.add_job(
         func=run_all_active_checkers,
         trigger=IntervalTrigger(minutes=1),
