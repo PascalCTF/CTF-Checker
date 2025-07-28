@@ -6,6 +6,8 @@
 ## About the project ⚙️
 CTF-Checker is a python based site made for the [`PascalCTF`](https://github.com/PascalCTF) cybersecurity event to check the status of the online services and their flags.
 
+The site now supports user accounts. Create an account via the `/register` page and log in to access the dashboard where you can upload and monitor challenge checkers.
+
 ## How to run 🛠️
 Clone the project and go inside the project directory
 ```

@@ -1,8 +1,10 @@
-from flask import Flask, request, render_template, send_file, flash, redirect, url_for
+from flask import Flask, request, render_template, send_file, flash, redirect, url_for, session
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import Base, Checkers, Status
+from models import Base, Checkers, Status, Users
 import os, pathlib, json, subprocess, zipfile, tempfile, datetime, csv
 
 DATABASE_URL = f'mysql+mysqlconnector://{os.getenv("MYSQL_USER")}:{os.getenv("MYSQL_PASSWORD")}@db:3306/{os.getenv("MYSQL_DATABASE")}'
@@ -16,7 +18,16 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024 # 32MB
 app.config['SECRET_KEY'] = os.urandom(32)
 
+def login_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not session.get('user_id'):
+            return redirect(url_for('login'))
+        return func(*args, **kwargs)
+    return wrapper
+
 @app.route('/')
+@login_required
 def dashboard():
     session = Session()
     checkers = session.query(Checkers).all()
@@ -52,7 +63,46 @@ def docs():
 def about():
     return render_template('about.html')
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+    username = request.form.get('username')
+    password = request.form.get('password')
+    db_sess = Session()
+    user = db_sess.query(Users).filter(Users.username == username).first()
+    if user and check_password_hash(user.password, password):
+        session['user_id'] = user.id
+        return redirect(url_for('dashboard'))
+    flash('Invalid credentials', 'error')
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'GET':
+        return render_template('register.html')
+    username = request.form.get('username')
+    password = request.form.get('password')
+    if not username or not password:
+        flash('Missing username or password', 'error')
+        return redirect(url_for('register'))
+    db_sess = Session()
+    if db_sess.query(Users).filter(Users.username == username).first():
+        flash('Username already exists', 'error')
+        return redirect(url_for('register'))
+    user = Users(username=username, password=generate_password_hash(password))
+    db_sess.add(user)
+    db_sess.commit()
+    flash('Account created, please login', 'success')
+    return redirect(url_for('login'))
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    return redirect(url_for('login'))
+
 @app.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload():
     if request.method == 'GET':
         return render_template('upload.html')
@@ -120,6 +170,7 @@ def upload():
         return render_template(url_for('upload'))
 
 @app.route('/export')
+@login_required
 def export():
     session = Session()
     status = session.query(Status).all()

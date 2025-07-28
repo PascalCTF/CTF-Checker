@@ -23,6 +23,12 @@
                         <li><a href="/upload" class="nav-link px-2 text-white link-body-emphasis"><b>Upload</b></a></li>
                         <li><a href="/docs" class="nav-link px-2 text-white link-body-emphasis"><b>Docs</b></a></li>
                         <li><a href="/about" class="nav-link px-2 text-white link-body-emphasis"><b>About</b></a></li>
+                        {% if session.get('user_id') %}
+                        <li><a href="/logout" class="nav-link px-2 text-white link-body-emphasis"><b>Logout</b></a></li>
+                        {% else %}
+                        <li><a href="/login" class="nav-link px-2 text-white link-body-emphasis"><b>Login</b></a></li>
+                        <li><a href="/register" class="nav-link px-2 text-white link-body-emphasis"><b>Register</b></a></li>
+                        {% endif %}
                     </ul>
                 </div>
             </div>
