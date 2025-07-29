@@ -4,7 +4,7 @@ import time
 import logging
 from datetime import datetime
 from app import app, db
-from models import Checker, CheckerExecution
+from models import Checker, CheckerExecution, ServerState
 
 CHECKER_TIMEOUT = 30
 
@@ -13,8 +13,8 @@ def run_checker(checker):
     start_time = time.time()
     
     try:
-        # TODO: actually run the checker with proper environment
         env = os.environ.copy()
+        env.update(checker.get_env_variables())
         
         result = subprocess.run(
             ['python3', checker.script_path],
@@ -84,6 +84,11 @@ def run_all_active_checkers():
     """Run all active checkers and store results"""
     with app.app_context():
         try:
+            last_run_time_state = ServerState.query.filter_by(key='last_run_time').first()
+            if last_run_time_state:
+                last_run_time_state.value = datetime.now().isoformat()
+                db.session.commit()
+
             active_checkers = Checker.query.filter_by(is_active=True).all()
             
             logging.info(f"Running {len(active_checkers)} active checkers")
@@ -127,6 +132,15 @@ def run_all_active_checkers():
         except Exception as e:
             logging.error(f"Error in run_all_active_checkers: {e}")
             db.session.rollback()
+
+def get_last_run_time():
+    """Return the last time the checkers were run"""
+    with app.app_context():
+        last_run_time_state = ServerState.query.filter_by(key='last_run_time').first()
+        if last_run_time_state and last_run_time_state.value:
+            return datetime.fromisoformat(last_run_time_state.value)
+        return None
+
 
 def cleanup_old_executions():
     """Remove old execution records to prevent database bloat"""

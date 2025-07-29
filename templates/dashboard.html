@@ -120,7 +120,7 @@
                             <tr>
                                 <th>Status</th>
                                 <th>Name</th>
-                                <th>Description</th>
+                                <th>Environment Variables</th>
                                 <th>Last Run</th>
                                 <th>Actions</th>
                             </tr>
@@ -146,7 +146,16 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <small class="text-muted">{{ checker.description or 'No description' }}</small>
+                                    {% set env_vars = checker.get_env_variables() %}
+                                    {% if env_vars %}
+                                        <small class="text-muted">
+                                            {% for key, value in env_vars.items() %}
+                                                <span class="badge bg-secondary me-1">{{ key }}</span>
+                                            {% endfor %}
+                                        </small>
+                                    {% else %}
+                                        <small class="text-muted">No env vars</small>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <span class="last-run-time">

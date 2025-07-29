@@ -26,13 +26,30 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="description" class="form-label">
-                                <i class="fas fa-align-left me-1"></i>
-                                Description
+                            <label class="form-label">
+                                <i class="fas fa-cogs me-1"></i>
+                                Environment Variables
                             </label>
-                            <textarea class="form-control" id="description" name="description" rows="3"
-                                      placeholder="Brief description of what this checker does"></textarea>
-                            <div class="form-text">Optional description for your reference</div>
+                            <div id="env-variables-container">
+                                <div class="row g-2 mb-2 env-var-row">
+                                    <div class="col-5">
+                                        <input type="text" class="form-control" name="env_key_0" placeholder="Variable name (e.g., URL)">
+                                    </div>
+                                    <div class="col-5">
+                                        <input type="text" class="form-control" name="env_value_0" placeholder="Value (e.g., http://challenge.example.com)">
+                                    </div>
+                                    <div class="col-2">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-env-var" onclick="removeEnvVar(this)">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addEnvVar()">
+                                <i class="fas fa-plus me-1"></i>
+                                Add Environment Variable
+                            </button>
+                            <div class="form-text">Add custom environment variables that will be available to your checker script</div>
                         </div>
 
                         <div class="mb-4">
@@ -64,7 +81,7 @@
                             <ul class="mb-0">
                                 <li>Your script must be written in Python 3</li>
                                 <li>Print the flag to stdout when successful</li>
-                                <li>Use environment variables for dynamic configuration (URL, HOST, PORT)</li>
+                                <li>Use environment variables for dynamic configuration</li>
                                 <li>Exit with code 0 for success, non-zero for failure</li>
                                 <li>Execution timeout is 30 seconds</li>
                             </ul>
@@ -117,4 +134,38 @@ print(flag)</code></pre>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let envVarCounter = 1;
+
+function addEnvVar() {
+    const container = document.getElementById('env-variables-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'row g-2 mb-2 env-var-row';
+    newRow.innerHTML = `
+        <div class="col-5">
+            <input type="text" class="form-control" name="env_key_${envVarCounter}" placeholder="Variable name">
+        </div>
+        <div class="col-5">
+            <input type="text" class="form-control" name="env_value_${envVarCounter}" placeholder="Value">
+        </div>
+        <div class="col-2">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-env-var" onclick="removeEnvVar(this)">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newRow);
+    envVarCounter++;
+}
+
+function removeEnvVar(button) {
+    const rows = document.querySelectorAll('.env-var-row');
+    if (rows.length > 1) {
+        button.closest('.env-var-row').remove();
+    }
+}
+</script>
 {% endblock %}

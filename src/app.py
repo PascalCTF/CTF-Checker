@@ -33,3 +33,9 @@ with app.app_context():
     import models
     db.create_all()
     logging.info("Database tables created")
+
+    if not models.ServerState.query.filter_by(key='last_run_time').first():
+        from datetime import datetime
+        initial_state = models.ServerState(key='last_run_time', value=datetime.now().isoformat())
+        db.session.add(initial_state)
+        db.session.commit()

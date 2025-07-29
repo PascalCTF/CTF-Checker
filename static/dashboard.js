@@ -1,24 +1,18 @@
 // Dashboard JavaScript functionality
 
 let refreshInterval;
-let lastUpdateTime = new Date();
+let serverLastUpdateTime = null;
 
-// Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    // Start auto-refresh
     startAutoRefresh();
     
-    // Initial status refresh
     refreshStatus();
     
-    // Update last update time display
     updateLastUpdateDisplay();
     setInterval(updateLastUpdateDisplay, 1000);
 });
 
-// Auto-refresh functionality
 function startAutoRefresh() {
-    // Refresh every 30 seconds
     refreshInterval = setInterval(refreshStatus, 30000);
 }
 
@@ -29,7 +23,6 @@ function stopAutoRefresh() {
     }
 }
 
-// Refresh checker status
 async function refreshStatus() {
     try {
         const response = await fetch('/api/checker_status');
@@ -37,9 +30,9 @@ async function refreshStatus() {
             throw new Error('Failed to fetch status');
         }
         
-        const checkers = await response.json();
-        updateCheckersTable(checkers);
-        lastUpdateTime = new Date();
+        const data = await response.json();
+        updateCheckersTable(data.checkers);
+        serverLastUpdateTime = new Date(data.server_time);
         
     } catch (error) {
         console.error('Error refreshing status:', error);
@@ -47,7 +40,6 @@ async function refreshStatus() {
     }
 }
 
-// Update checkers table with new data
 function updateCheckersTable(checkers) {
     const tableBody = document.getElementById('checkers-table');
     if (!tableBody) return;
@@ -56,17 +48,14 @@ function updateCheckersTable(checkers) {
         const row = tableBody.querySelector(`tr[data-checker-id="${checker.id}"]`);
         if (!row) return;
         
-        // Update status indicator
         const statusIndicator = row.querySelector('.status-indicator');
         const statusText = row.querySelector('.status-text');
         
         if (statusIndicator && statusText) {
-            // Remove old status classes
             statusIndicator.className = 'status-indicator';
             statusIndicator.classList.add(`status-${checker.status}`);
             statusText.textContent = capitalizeFirst(checker.status);
             
-            // Add animation if status changed
             if (statusText.dataset.lastStatus !== checker.status) {
                 row.classList.add('status-updated');
                 setTimeout(() => row.classList.remove('status-updated'), 2000);
@@ -74,14 +63,12 @@ function updateCheckersTable(checkers) {
             }
         }
         
-        // Update last run time
         const lastRunElement = row.querySelector('.last-run-time');
         if (lastRunElement && checker.last_run) {
             const lastRunDate = new Date(checker.last_run);
             lastRunElement.textContent = formatDateTime(lastRunDate);
         }
         
-        // Update status icon
         const nameCell = row.children[1];
         const existingIcon = nameCell.querySelector('.fas');
         if (existingIcon) existingIcon.remove();
@@ -112,12 +99,10 @@ function updateCheckersTable(checkers) {
     });
 }
 
-// Show checker details modal
 async function showCheckerDetails(checkerId) {
     const modal = new bootstrap.Modal(document.getElementById('checkerDetailsModal'));
     const content = document.getElementById('checkerDetailsContent');
     
-    // Show loading state
     content.innerHTML = `
         <div class="text-center py-3">
             <div class="loading-spinner"></div>
@@ -129,14 +114,13 @@ async function showCheckerDetails(checkerId) {
     
     try {
         const response = await fetch(`/api/checker_status`);
-        const checkers = await response.json();
-        const checker = checkers.find(c => c.id === checkerId);
+        const data = await response.json();
+        const checker = data.checkers.find(c => c.id === checkerId);
         
         if (!checker) {
             throw new Error('Checker not found');
         }
         
-        // Display checker details
         content.innerHTML = `
             <div class="row">
                 <div class="col-md-6">
@@ -187,7 +171,6 @@ async function showCheckerDetails(checkerId) {
     }
 }
 
-// Utility functions
 function capitalizeFirst(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
@@ -204,25 +187,26 @@ function escapeHtml(text) {
 
 function updateLastUpdateDisplay() {
     const element = document.getElementById('last-update');
-    if (!element) return;
-    
+    if (!element || !serverLastUpdateTime) return;
+
     const now = new Date();
-    const diff = Math.floor((now - lastUpdateTime) / 1000);
-    
+    const diff = Math.floor((now - serverLastUpdateTime + (new Date()).getTimezoneOffset() * 60000) / 1000); // Adjust for timezone offset in seconds
+
     let displayText = '';
     if (diff < 60) {
         displayText = `${diff}s ago`;
     } else if (diff < 3600) {
+        refreshStatus();
         displayText = `${Math.floor(diff / 60)}m ago`;
     } else {
+        refreshStatus();
         displayText = `${Math.floor(diff / 3600)}h ago`;
     }
     
-    element.innerHTML = `<i class="fas fa-check me-1"></i>${displayText}`;
+    element.innerHTML = `<i class="fas fa-sync me-1"></i>${displayText}`;
 }
 
 function showNotification(message, type = 'info') {
-    // Create notification element
     const notification = document.createElement('div');
     notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
     notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
@@ -234,7 +218,6 @@ function showNotification(message, type = 'info') {
     
     document.body.appendChild(notification);
     
-    // Auto-remove after 5 seconds
     setTimeout(() => {
         if (notification.parentNode) {
             notification.parentNode.removeChild(notification);
@@ -242,11 +225,10 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Handle visibility change to pause/resume auto-refresh
 document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'visible') {
         startAutoRefresh();
-        refreshStatus(); // Immediate refresh when page becomes visible
+        refreshStatus();
     } else {
         stopAutoRefresh();
     }

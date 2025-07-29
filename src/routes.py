@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from app import app, db
 from models import Checker, CheckerExecution
 import logging
+from checker_runner import get_last_run_time
 
 @app.route('/')
 def index():
@@ -25,8 +26,15 @@ def dashboard():
 def add_checker():
     if request.method == 'POST':
         name = request.form['name']
-        description = request.form.get('description', '')
         expected_flag = request.form['expected_flag']
+        
+        env_vars = {}
+        for key, value in request.form.items():
+            if key.startswith('env_key_') and value.strip():
+                index = key.replace('env_key_', '')
+                env_value = request.form.get(f'env_value_{index}', '').strip()
+                if env_value:
+                    env_vars[value.strip()] = env_value
         
         if 'script_file' not in request.files:
             flash('No script file uploaded.', 'error')
@@ -44,10 +52,10 @@ def add_checker():
             
             checker = Checker(
                 name=name,
-                description=description,
                 script_path=file_path,
                 expected_flag=expected_flag
             )
+            checker.set_env_variables(env_vars)
             db.session.add(checker)
             db.session.commit()
             
@@ -102,10 +110,16 @@ def checker_status():
             'last_run': checker.last_run.isoformat() if checker.last_run else None,
             'is_active': checker.is_active,
             'recent_output': recent_execution.output if recent_execution else None,
-            'error_message': recent_execution.error_message if recent_execution else None
+            'error_message': recent_execution.error_message if recent_execution else None,
+            'env_variables': checker.get_env_variables()
         })
     
-    return jsonify(status_data)
+    last_run_time = get_last_run_time()
+    
+    return jsonify({
+        'checkers': status_data,
+        'server_time': last_run_time.isoformat() if last_run_time else None
+    })
 
 @app.route('/checker_details/<int:checker_id>')
 def checker_details(checker_id):
