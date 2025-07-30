@@ -12,9 +12,23 @@ class Checker(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_run = db.Column(db.DateTime)
     last_status = db.Column(db.String(20), default='pending')
+    dependencies = db.Column(db.Text)
     
     executions = db.relationship('CheckerExecution', backref='checker', lazy=True, cascade='all, delete-orphan')
     
+    def get_dependencies(self):
+        """Get dependencies as a list"""
+        if self.dependencies:
+            try:
+                return json.loads(self.dependencies)
+            except json.JSONDecodeError:
+                return []
+        return []
+
+    def set_dependencies(self, dependencies_list):
+        """Set dependencies from a list"""
+        self.dependencies = json.dumps(dependencies_list) if dependencies_list else None
+
     def get_env_variables(self):
         """Get environment variables as a dictionary"""
         if self.env_variables:

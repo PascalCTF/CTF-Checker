@@ -163,6 +163,19 @@
                             </div>
                         </div>
                         <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Dependencies:</strong></div>
+                            <div class="col-sm-8">
+                                {% set dependencies = checker.get_dependencies() %}
+                                {% if dependencies %}
+                                    {% for dependency in dependencies %}
+                                        <span class="badge bg-info me-1">{{ dependency }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <small class="text-muted">No dependencies detected</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
                             <div class="col-sm-4"><strong>Status:</strong></div>
                             <div class="col-sm-8">
                                 <span class="badge bg-{{ 'success' if checker.is_active else 'secondary' }}">

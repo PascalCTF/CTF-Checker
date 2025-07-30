@@ -1,11 +1,25 @@
 import os
+import re
 import uuid
+import importlib
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
 from app import app, db
 from models import Checker, CheckerExecution
 import logging
 from checker_runner import get_last_run_time
+
+def find_dependencies(script_content):
+    imports = re.findall(r'^(?:from|import)\s+([a-zA-Z0-9_]+)', script_content, re.MULTILINE)
+    dependencies = []
+
+    for imp in imports:
+        try:
+            importlib.import_module(imp)
+        except:
+            dependencies.append(imp)
+
+    return list(set(dependencies))
 
 @app.route('/')
 def index():
@@ -50,12 +64,17 @@ def add_checker():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             
+            file.seek(0)
+            script_content = file.read().decode('utf-8')
+            dependencies = find_dependencies(script_content)
+            
             checker = Checker(
                 name=name,
                 script_path=file_path,
                 expected_flag=expected_flag
             )
             checker.set_env_variables(env_vars)
+            checker.set_dependencies(dependencies)
             db.session.add(checker)
             db.session.commit()
             
@@ -154,6 +173,11 @@ def checker_details(checker_id):
                 script_path = os.path.join('uploads', filename)
                 script_file.save(script_path)
                 checker.script_path = script_path
+                
+                script_file.seek(0)
+                script_content = script_file.read().decode('utf-8')
+                dependencies = find_dependencies(script_content)
+                checker.set_dependencies(dependencies)
         
         db.session.commit()
         flash(f'Checker "{checker.name}" updated successfully.', 'success')

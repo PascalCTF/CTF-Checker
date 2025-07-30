@@ -13,6 +13,10 @@ def run_checker(checker):
     start_time = time.time()
     
     try:
+        dependencies = checker.get_dependencies()
+        if dependencies:
+            subprocess.run(['pip', 'install', *dependencies], check=True)
+
         env = os.environ.copy()
         env.update(checker.get_env_variables())
         
