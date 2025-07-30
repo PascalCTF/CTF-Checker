@@ -173,6 +173,11 @@
                                            title="{{ 'Activate' if not checker.is_active else 'Deactivate' }}">
                                             <i class="fas fa-{{ 'play' if not checker.is_active else 'pause' }}"></i>
                                         </a>
+                                        <a href="{{ url_for('checker_details', checker_id=checker.id) }}" 
+                                           class="btn btn-outline-warning"
+                                           title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
                                         <button class="btn btn-outline-info" onclick="showCheckerDetails({{ checker.id }})" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </button>

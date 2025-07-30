@@ -121,14 +121,65 @@ def checker_status():
         'server_time': last_run_time.isoformat() if last_run_time else None
     })
 
-@app.route('/checker_details/<int:checker_id>')
+@app.route('/checker_details/<int:checker_id>', methods=['GET', 'POST'])
 def checker_details(checker_id):
     checker = Checker.query.get_or_404(checker_id)
+    
+    if request.method == 'POST':
+        checker.name = request.form['name']
+        checker.expected_flag = request.form['expected_flag']
+        checker.is_active = 'is_active' in request.form
+        
+        env_vars = {}
+        for key, value in request.form.items():
+            if key.startswith('env_key_'):
+                index = key.split('_')[-1]
+                env_key = value.strip()
+                env_value = request.form.get(f'env_value_{index}', '').strip()
+                if env_key and env_value:
+                    env_vars[env_key] = env_value
+        
+        checker.set_env_variables(env_vars)
+        
+        if 'script_file' in request.files and request.files['script_file'].filename:
+            script_file = request.files['script_file']
+            if script_file and script_file.filename.endswith('.py'):
+                try:
+                    if os.path.exists(checker.script_path):
+                        os.remove(checker.script_path)
+                except OSError:
+                    pass
+                
+                filename = secure_filename(f"{uuid.uuid4().hex}.py")
+                script_path = os.path.join('uploads', filename)
+                script_file.save(script_path)
+                checker.script_path = script_path
+        
+        db.session.commit()
+        flash(f'Checker "{checker.name}" updated successfully.', 'success')
+        return redirect(url_for('checker_details', checker_id=checker_id))
+    
+    # Get execution history
     executions = CheckerExecution.query.filter_by(
         checker_id=checker_id
     ).order_by(CheckerExecution.executed_at.desc()).limit(50).all()
     
     return render_template('checker_details.html', checker=checker, executions=executions)
+
+@app.route('/api/execution_details/<int:execution_id>')
+def execution_details_api(execution_id):
+    """API endpoint for execution details"""
+    execution = CheckerExecution.query.get_or_404(execution_id)
+    
+    return jsonify({
+        'id': execution.id,
+        'executed_at': execution.executed_at.isoformat(),
+        'status': execution.status,
+        'output': execution.output,
+        'error_message': execution.error_message,
+        'execution_time': execution.execution_time,
+        'flag_found': execution.flag_found
+    })
 
 @app.errorhandler(404)
 def not_found_error(error):
