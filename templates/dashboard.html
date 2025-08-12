@@ -28,10 +28,16 @@
             </h1>
             <p class="text-muted">Monitor and manage your CTF checkers</p>
         </div>
-        <a href="{{ url_for('add_checker') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>
-            Add New Checker
-        </a>
+        <div>
+            <a href="{{ url_for('add_checker') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                Add New Checker
+            </a>
+            <a href="{{ url_for('add_bulk_checkers') }}" class="btn btn-secondary">
+                <i class="fas fa-upload me-2"></i>
+                Bulk Add
+            </a>
+        </div>
     </div>
 
     <!-- Statistics Cards -->

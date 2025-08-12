@@ -1,7 +1,7 @@
 # CTF Checker Manager 🏳️
 ![Docker Support](https://img.shields.io/badge/docker-supported-blue)
 ![Python Version](https://img.shields.io/badge/python-3.11+-green)
-![License](https://img.shields.io/badge/license-MIT-blue)
+![License](https://img.shields.io/github/license/PascalCTF/CTF-Checker)
 
 ## About the project ⚙️
 CTF Checker Manager is a Flask-based web application designed for monitoring CTF (Capture The Flag) challenge checkers with automated periodic execution. The system has been updated to remove authentication requirements, making it publicly accessible for all users to upload and monitor challenge checkers.
@@ -156,4 +156,4 @@ The `docker-compose.yml` file configures:
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the GPL-3.0 license.

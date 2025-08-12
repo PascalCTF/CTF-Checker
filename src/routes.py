@@ -2,6 +2,8 @@ import os
 import re
 import uuid
 import importlib
+import zipfile
+import json
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
 from app import app, db
@@ -35,6 +37,80 @@ def dashboard():
         ).order_by(CheckerExecution.executed_at.desc()).limit(10).all()
     
     return render_template('dashboard.html', checkers=checkers)
+
+
+@app.route('/add_bulk_checkers', methods=['GET', 'POST'])
+def add_bulk_checkers():
+    if request.method == 'POST':
+        if 'zip_file' not in request.files:
+            flash('No ZIP file uploaded.', 'error')
+            return render_template('add_bulk_checkers.html')
+
+        file = request.files['zip_file']
+        if file.filename == '':
+            flash('No ZIP file selected.', 'error')
+            return render_template('add_bulk_checkers.html')
+
+        if file and file.filename.endswith('.zip'):
+            zip_filename = secure_filename(file.filename)
+            zip_path = os.path.join(app.config['UPLOAD_FOLDER'], zip_filename)
+            file.save(zip_path)
+
+            extract_folder = os.path.join(app.config['UPLOAD_FOLDER'], zip_filename.replace('.zip', ''))
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_folder)
+
+            added_count = 0
+            for item in os.listdir(extract_folder):
+                item_path = os.path.join(extract_folder, item)
+                if os.path.isdir(item_path):
+                    metadata_path = os.path.join(item_path, 'metadata.json')
+                    script_path = None
+                    for file_in_dir in os.listdir(item_path):
+                        if file_in_dir.endswith('.py'):
+                            script_path = os.path.join(item_path, file_in_dir)
+                            break
+                    
+                    if os.path.exists(metadata_path) and script_path:
+                        with open(metadata_path, 'r') as f:
+                            metadata = json.load(f)
+                        
+                        name = metadata.get('name')
+                        expected_flag = metadata.get('expected_flag')
+                        env_vars = metadata.get('env_variables', {})
+
+                        if name and expected_flag:
+                            new_filename = f"{uuid.uuid4()}.py"
+                            new_script_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
+                            os.rename(script_path, new_script_path)
+
+                            with open(new_script_path, 'r') as f:
+                                script_content = f.read()
+                            
+                            dependencies = find_dependencies(script_content)
+
+                            checker = Checker(
+                                name=name,
+                                script_path=new_script_path,
+                                expected_flag=expected_flag
+                            )
+                            checker.set_env_variables(env_vars)
+                            checker.set_dependencies(dependencies)
+                            db.session.add(checker)
+                            added_count += 1
+
+            if added_count > 0:
+                db.session.commit()
+                flash(f'{added_count} checkers added successfully!', 'success')
+            else:
+                flash('No valid checkers found in the ZIP file.', 'warning')
+
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Only ZIP (.zip) files are allowed.', 'error')
+
+    return render_template('add_bulk_checkers.html')
+
 
 @app.route('/add_checker', methods=['GET', 'POST'])
 def add_checker():

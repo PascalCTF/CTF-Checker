@@ -190,7 +190,7 @@ function updateLastUpdateDisplay() {
     if (!element || !serverLastUpdateTime) return;
 
     const now = new Date();
-    const diff = Math.floor((now - serverLastUpdateTime + (new Date()).getTimezoneOffset() * 60000) / 1000); // Adjust for timezone offset in seconds
+    const diff = Math.floor((now - serverLastUpdateTime) / 1000);
 
     let displayText = '';
     if (diff < 60) {
