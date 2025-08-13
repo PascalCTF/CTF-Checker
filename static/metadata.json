@@ -1,0 +1,8 @@
+{
+  "name": "My Awesome CTF Challenge",
+  "expected_flag": "flag{this_is_a_sample_flag}",
+  "env_variables": {
+    "TARGET_HOST": "127.0.0.1",
+    "TARGET_PORT": "8080"
+  }
+}
