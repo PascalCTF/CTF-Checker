@@ -36,6 +36,10 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+networks:
+  default:
+    enable_ipv6: true
+
 volumes:
   postgres_data:
   uploads:
