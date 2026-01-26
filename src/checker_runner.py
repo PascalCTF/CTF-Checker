@@ -136,6 +136,8 @@ def run_all_active_checkers():
         except Exception as e:
             logging.error(f"Error in run_all_active_checkers: {e}")
             db.session.rollback()
+        finally:
+            db.session.remove()
 
 def get_last_run_time():
     """Return the last time the checkers were run"""

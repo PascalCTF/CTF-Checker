@@ -31,11 +31,19 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 with app.app_context():
     import models
-    db.create_all()
-    logging.info("Database tables created")
+    try:
+        db.create_all()
+        logging.info("Database tables created")
+    except Exception as e:
+        logging.warning(f"Table creation skipped (likely already exists): {e}")
 
-    if not models.ServerState.query.filter_by(key='last_run_time').first():
-        from datetime import datetime
-        initial_state = models.ServerState(key='last_run_time', value=datetime.now().isoformat())
-        db.session.add(initial_state)
-        db.session.commit()
+    try:
+        if not models.ServerState.query.filter_by(key='last_run_time').first():
+            from datetime import datetime
+            initial_state = models.ServerState(key='last_run_time', value=datetime.now().isoformat())
+            db.session.add(initial_state)
+            db.session.commit()
+    except Exception as e:
+        logging.warning(f"Initial state creation skipped: {e}")
+        db.session.rollback()
+

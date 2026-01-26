@@ -11,6 +11,18 @@ from models import Checker, CheckerExecution
 import logging
 from checker_runner import get_last_run_time
 
+@app.route('/health')
+def health():
+    """Health check endpoint for Docker healthcheck"""
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        db.session.commit()
+        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+    except Exception as e:
+        logging.error(f"Health check failed: {e}")
+        db.session.rollback()
+        return jsonify({'status': 'unhealthy', 'database': 'disconnected', 'error': str(e)}), 503
+
 def find_dependencies(script_content):
     imports = re.findall(r'^(?:from|import)\s+([a-zA-Z0-9_]+)', script_content, re.MULTILINE)
     dependencies = []

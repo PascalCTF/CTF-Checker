@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN apk add --no-cache \
       gcc musl-dev linux-headers \
-      postgresql-client \
+      postgresql-client curl \
     && rm -rf /var/cache/apk/*
 
 COPY requirements.txt .
